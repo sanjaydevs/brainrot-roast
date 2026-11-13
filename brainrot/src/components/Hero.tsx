@@ -13,9 +13,7 @@ export default function Hero() {
 
       {/* Main heading */}
       <h1 className="text-[clamp(3.5rem,8vw,7.5rem)] font-black uppercase leading-[0.82] tracking-[-0.07em]">
-        ROAST
-        <br />
-        MY
+        ROAST MY
         <br />
         <span className="text-yellow-400">SCREEN</span>
         <br />
