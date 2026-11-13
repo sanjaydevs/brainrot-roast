@@ -300,17 +300,6 @@ export default function Upload({ onAnalysisComplete }: UploadProps) {
             </span>
           </button>
         </div>
-
-        {/* Panel footer */}
-        <div className="flex items-center justify-between border-t border-zinc-800 px-4 py-3">
-          <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-600">
-            YOUR DATA. YOUR BUSINESS.
-          </p>
-
-          <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-600">
-            NO MANUAL ENTRY
-          </p>
-        </div>
       </div>
     </div>
   )

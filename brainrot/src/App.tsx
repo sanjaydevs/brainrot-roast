@@ -48,11 +48,11 @@ function App() {
         {/* Brand strip */}
         <div className="flex items-center justify-between border-b border-zinc-800 py-6">
           <p className="text-xl font-black tracking-tight sm:text-2xl">
-            BRAIN ROT<span className="text-yellow-400">®</span>
+            BRAIN ROT<span className="text-yellow-400"> ®</span>
           </p>
 
           <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-zinc-500 sm:text-xs">
-            Screen Time Intelligence / 001
+            Roast yourself....
           </p>
         </div>
 
@@ -80,7 +80,7 @@ function App() {
         {/* Footer */}
         <footer className="flex flex-col gap-3 border-t border-zinc-800 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600 sm:flex-row sm:items-center sm:justify-between">
           <p>NO FILTERS. NO MERCY.</p>
-          <p>IOS / ANDROID · EST. 2026</p>
+          <p>© 2026 Sanjay</p>
         </footer>
 
       </main>

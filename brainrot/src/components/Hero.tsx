@@ -22,8 +22,9 @@ export default function Hero() {
 
       {/* Description */}
       <p className="mt-10 max-w-md text-base leading-relaxed text-zinc-400 sm:text-lg">
-        Your screen time says everything about you.
+        Your screen time says everything about you.<br/>
         Unfortunately, none of it is good.
+        <br/>
         <span className="text-white">
           {' '}Upload your report and be prepared to be humbled.
         </span>
@@ -31,14 +32,6 @@ export default function Hero() {
 
       {/* Platform support */}
       <div className="mt-10 flex flex-wrap items-center gap-3">
-        <span className="border border-zinc-700 px-4 py-2 text-xs font-bold uppercase tracking-wider">
-          iOS
-        </span>
-
-        <span className="border border-zinc-700 px-4 py-2 text-xs font-bold uppercase tracking-wider">
-          Android
-        </span>
-
         <span className="text-xs uppercase tracking-wider text-zinc-600">
           Screenshot only
         </span>
