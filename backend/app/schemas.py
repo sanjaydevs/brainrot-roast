@@ -16,3 +16,12 @@ class ScreenTimeData(BaseModel):
     warnings: list[str] = Field(
         description="Missing, unreadable, or ambiguous information"
     )
+    
+class RoastReport(BaseModel):
+    headline: str = Field(description="A short, funny roast headline")
+    roast: list[str] = Field(
+        description="Two or three personalized roast paragraphs"
+    )
+    insights: list[str] = Field(
+        description="Three specific observations based on the screen-time data"
+    )

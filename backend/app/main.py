@@ -7,6 +7,7 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from app.services.gemini_service import extract_screen_time
 from app.scoring import calculate_brain_rot_score
+from app.services.roast_service import generate_roast
 
 load_dotenv()
 
@@ -56,9 +57,16 @@ async def analyze_screenshot(file:UploadFile = File(...)):
         )
         score_result = calculate_brain_rot_score(extracted_data)
 
+        roast_result = generate_roast(
+            screen_time=extracted_data,
+            score=score_result,
+        )
+        
+        
         return {
             "screen_time": extracted_data.model_dump(),
-            "score": score_result
+            "score": score_result,
+            "roast": roast_result.model_dump(),
         }
 
     except Exception as exc:

@@ -1,29 +1,19 @@
 
 import { useEffect, useRef, useState } from 'react'
+import type { AnalysisResult } from '../App'
 
-interface AnalysisResult {
-  screen_time: {
-    platform: string
-    total_screen_time_minutes: number | null
-    apps: {
-      name: string
-      duration_minutes: number
-    }[]
-    warnings: string[]
-  }
-  score: {
-    brain_rot_score: number
-    components: {
-      screen_time: number
-      high_stimulation_usage: number
-      app_concentration: number
-    }
-    high_stimulation_minutes: number
-    explanations: string[]
-  }
+interface UploadProps {
+  onAnalysisComplete: (result: AnalysisResult) => void
 }
 
-export default function Upload() {
+const loadingMessages = [
+  'COUNTING YOUR BAD DECISIONS...',
+  'ANALYZING YOUR DIGITAL HABITS...',
+  'PREPARING YOUR HUMBLING...',
+  'YOUR PHONE IS NOT IMPRESSED...',
+]
+
+export default function Upload({ onAnalysisComplete }: UploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [image, setImage] = useState<File | null>(null)
@@ -31,9 +21,9 @@ export default function Upload() {
   const [error, setError] = useState('')
   const [isDragging, setIsDragging] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState<AnalysisResult | null>(null)
+  const [loadingMessage, setLoadingMessage] = useState(0)
 
-  // Clean up temporary preview URLs
+  // Create and clean up image preview URL
   useEffect(() => {
     if (!image) {
       setPreview(null)
@@ -46,40 +36,66 @@ export default function Upload() {
     return () => URL.revokeObjectURL(url)
   }, [image])
 
+  // Rotate loading messages during analysis
+  useEffect(() => {
+    if (!loading) {
+      setLoadingMessage(0)
+      return
+    }
+
+    const interval = window.setInterval(() => {
+      setLoadingMessage((previous) =>
+        (previous + 1) % loadingMessages.length
+      )
+    }, 2500)
+
+    return () => window.clearInterval(interval)
+  }, [loading])
+
   function handleFile(file?: File) {
     if (!file) return
 
     setError('')
-    setResult(null)
 
     if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
-      setError('Upload a PNG, JPG, or WebP screenshot.')
+      setError('INVALID FILE. Upload a PNG, JPG, or WebP screenshot.')
       return
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      setError('Image must be smaller than 10 MB.')
+      setError('FILE TOO LARGE. Maximum allowed size is 10 MB.')
       return
     }
 
     setImage(file)
   }
 
+  function removeImage() {
+    setImage(null)
+    setError('')
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
   async function uploadScreenshot() {
-    if (!image) return
+    if (!image || loading) return
 
     setLoading(true)
     setError('')
-    setResult(null)
 
     try {
       const formData = new FormData()
       formData.append('file', image)
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/analyze`, {
-        method: 'POST',
-        body: formData,
-      })
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/analyze`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      )
 
       const data = await response.json()
 
@@ -87,7 +103,7 @@ export default function Upload() {
         throw new Error(data.detail || 'Analysis failed.')
       }
 
-      setResult(data)
+      onAnalysisComplete(data as AnalysisResult)
     } catch (err) {
       setError(
         err instanceof Error
@@ -99,257 +115,203 @@ export default function Upload() {
     }
   }
 
-  function formatDuration(minutes: number) {
-    const hours = Math.floor(minutes / 60)
-    const remainingMinutes = minutes % 60
-
-    return `${hours}h ${remainingMinutes}m`
-  }
-
   return (
-    <div className="mx-auto grid w-full gap-5 text-white">
+    <div className="w-full space-y-6 text-white">
 
-      {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/png,image/jpeg,image/webp"
-        className="hidden"
-        onChange={(e) => handleFile(e.target.files?.[0])}
-      />
+      {/* Upload panel */}
+      <div className="border-2 border-zinc-700 bg-[#111111]">
 
-      {/* Drag and drop area */}
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => fileInputRef.current?.click()}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            fileInputRef.current?.click()
-          }
-        }}
-        onDragOver={(e) => {
-          e.preventDefault()
-          setIsDragging(true)
-        }}
-        onDragLeave={() => setIsDragging(false)}
-        onDrop={(e) => {
-          e.preventDefault()
-          setIsDragging(false)
-          handleFile(e.dataTransfer.files[0])
-        }}
-        className={`flex min-h-64 cursor-pointer flex-col items-center justify-center border-4 p-5 text-center transition ${
-          isDragging
-            ? 'border-yellow-400 bg-yellow-100 text-black'
-            : 'border-white bg-zinc-900 hover:border-yellow-400'
-        }`}
-      >
-        {preview ? (
-          <img
-            src={preview}
-            alt="Selected screen-time screenshot"
-            className="max-h-64 max-w-full object-contain"
-          />
-        ) : (
-          <>
-            <p className="text-xl font-bold">
-              DROP YOUR SCREEN TIME
-            </p>
-
-            <p className="mt-2 text-sm text-zinc-300">
-              Drag a screenshot here or click to browse
-            </p>
-
-            <p className="mt-2 text-xs text-zinc-400">
-              PNG, JPG or WebP · Max 10 MB
-            </p>
-          </>
-        )}
-      </div>
-
-      {/* Selected file */}
-      {image && (
-        <div className="flex items-center justify-between gap-3">
-          <p className="break-all text-sm text-zinc-300">
-            Selected: {image.name}
+        {/* Panel heading */}
+        <div className="flex items-center justify-between border-b border-zinc-700 px-4 py-4">
+          <p className="text-xs font-black uppercase tracking-[0.2em]">
+            INPUT / 001
           </p>
 
-          <button
-            type="button"
-            onClick={() => {
-              setImage(null)
-              setResult(null)
-              setError('')
-              if (fileInputRef.current) {
-                fileInputRef.current.value = ''
-              }
-            }}
-            className="shrink-0 text-sm text-red-400 hover:text-red-300"
-          >
-            Remove
-          </button>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-yellow-400">
+            {image ? 'FILE LOADED' : 'AWAITING INPUT'}
+          </span>
         </div>
-      )}
 
-      {/* Error */}
-      {error && (
-        <p role="alert" className="text-sm text-red-400">
-          {error}
-        </p>
-      )}
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          className="hidden"
+          onChange={(e) => {
+            handleFile(e.target.files?.[0])
+            e.target.value = ''
+          }}
+        />
 
-      {/* Analyze button */}
-      <button
-        type="button"
-        disabled={!image || loading}
-        onClick={uploadScreenshot}
-        className="border-2 border-white p-3 font-bold transition hover:bg-yellow-400 hover:text-black disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        {loading ? 'ANALYZING YOUR SCREEN TIME...' : 'ROAST MY SCREEN TIME'}
-      </button>
+        {/* Drag and drop area */}
+        <div
+          role="button"
+          tabIndex={0}
+          aria-label="Upload screen time screenshot"
+          aria-disabled={loading}
+          onClick={() => {
+            if (!loading) fileInputRef.current?.click()
+          }}
+          onKeyDown={(e) => {
+            if (!loading && (e.key === 'Enter' || e.key === ' ')) {
+              e.preventDefault()
+              fileInputRef.current?.click()
+            }
+          }}
+          onDragOver={(e) => {
+            e.preventDefault()
+            if (!loading) setIsDragging(true)
+          }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault()
+            setIsDragging(false)
 
-      {/* Analysis results */}
-      {result && (
-        <div className="mt-4 space-y-5 border-2 border-yellow-400 p-5">
+            if (!loading) {
+              handleFile(e.dataTransfer.files[0])
+            }
+          }}
+          className={`relative mx-3 my-3 flex min-h-[280px] flex-col items-center justify-center border-2 border-dashed p-6 text-center transition-all duration-200 ${
+            isDragging
+              ? 'border-yellow-400 bg-yellow-400 text-black'
+              : 'cursor-pointer border-zinc-700 bg-[#090909] hover:border-yellow-400'
+          } ${loading ? 'cursor-wait opacity-70' : ''}`}
+        >
+          {preview ? (
+            <div className="w-full space-y-4">
+              <img
+                src={preview}
+                alt="Selected screen-time screenshot"
+                className="mx-auto max-h-64 max-w-full object-contain"
+              />
 
-          <h2 className="text-xl font-black text-yellow-400">
-            SCREEN TIME ANALYSIS
-          </h2>
-
-          {/* Brain Rot Score */}
-          <div className="border-b border-zinc-700 pb-5">
-            <p className="text-sm uppercase tracking-widest text-zinc-400">
-              Your Brain Rot Score
-            </p>
-
-            <p className="mt-2 text-6xl font-black text-yellow-400">
-              {result.score.brain_rot_score}
-              <span className="text-2xl text-zinc-500">/100</span>
-            </p>
-          </div>
-
-          {/* Screen time details */}
-          <div className="space-y-2">
-            <p>
-              Platform:{' '}
-              <span className="font-bold uppercase">
-                {result.screen_time.platform}
-              </span>
-            </p>
-
-            <p>
-              Total screen time:{' '}
-              <span className="font-bold">
-                {result.screen_time.total_screen_time_minutes == null
-                  ? 'Unavailable'
-                  : formatDuration(
-                      result.screen_time.total_screen_time_minutes
-                    )}
-              </span>
-            </p>
-
-            <p>
-              High-stimulation usage:{' '}
-              <span className="font-bold">
-                {formatDuration(result.score.high_stimulation_minutes)}
-              </span>
-            </p>
-          </div>
-
-          {/* Score breakdown */}
-          <div className="space-y-3 border-t border-zinc-700 pt-4">
-            <h3 className="font-bold text-yellow-400">
-              SCORE BREAKDOWN
-            </h3>
-
-            {Object.entries(result.score.components).map(([name, value]) => (
-              <div key={name}>
-                <div className="mb-1 flex justify-between text-sm">
-                  <span className="capitalize">
-                    {name.replaceAll('_', ' ')}
-                  </span>
-                  <span>{value} points</span>
-                </div>
-
-                <div className="h-2 overflow-hidden bg-zinc-800">
-                  <div
-                    className="h-full bg-yellow-400"
-                    style={{
-                      width: `${Math.min(
-                        (value /
-                          (name === 'screen_time'
-                            ? 40
-                            : name === 'high_stimulation_usage'
-                              ? 40
-                              : 20)) *
-                          100,
-                        100
-                      )}%`,
-                    }}
-                  />
-                </div>
+              <p className="text-xs font-bold uppercase tracking-widest text-yellow-400">
+                SCREENSHOT READY
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="mb-5 flex h-16 w-16 items-center justify-center border-2 border-yellow-400 text-3xl font-black text-yellow-400">
+                +
               </div>
-            ))}
-          </div>
 
-          {/* Top apps */}
-          <div className="space-y-2 border-t border-zinc-700 pt-4">
-            <h3 className="font-bold text-yellow-400">
-              TOP APPS
-            </h3>
-
-            {result.screen_time.apps.length > 0 ? (
-              <ul className="space-y-2">
-                {result.screen_time.apps.map((app, index) => (
-                  <li
-                    key={`${app.name}-${index}`}
-                    className="flex justify-between gap-3 border-b border-zinc-800 pb-2 text-sm"
-                  >
-                    <span>{app.name}</span>
-                    <span className="font-bold">
-                      {formatDuration(app.duration_minutes)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-zinc-400">
-                No app usage was extracted.
-              </p>
-            )}
-          </div>
-
-          {/* Scoring explanations */}
-          <div className="space-y-2 border-t border-zinc-700 pt-4">
-            <h3 className="font-bold text-yellow-400">
-              WHY THIS SCORE?
-            </h3>
-
-            {result.score.explanations.map((item, index) => (
-              <p key={index} className="text-sm text-zinc-300">
-                • {item}
-              </p>
-            ))}
-          </div>
-
-          {/* Extraction warnings */}
-          {result.screen_time.warnings?.length > 0 && (
-            <div className="border-t border-zinc-700 pt-4">
-              <h3 className="font-bold text-yellow-400">
-                DATA WARNINGS
+              <h3 className="text-xl font-black uppercase tracking-tight sm:text-2xl">
+                {isDragging ? 'DROP IT HERE.' : 'DROP YOUR SCREEN TIME.'}
               </h3>
 
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-yellow-200">
-                {result.screen_time.warnings.map((warning, index) => (
-                  <li key={index}>{warning}</li>
-                ))}
-              </ul>
-            </div>
-          )}
+              <p className="mt-3 max-w-xs text-sm leading-relaxed text-zinc-500">
+                Drag your screenshot into this box or click anywhere to browse your files.
+              </p>
 
+              <p className="mt-6 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">
+                PNG / JPG / WEBP · MAX 10 MB
+              </p>
+            </>
+          )}
         </div>
-      )}
+
+        {/* Selected file information */}
+        {image && (
+          <div className="mx-3 mb-3 flex flex-wrap items-center justify-between gap-3 border border-zinc-700 bg-[#090909] p-3">
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                Selected file
+              </p>
+
+              <p className="mt-1 break-all text-sm font-bold">
+                {image.name}
+              </p>
+
+              <p className="mt-1 text-xs text-zinc-500">
+                {(image.size / (1024 * 1024)).toFixed(2)} MB
+              </p>
+            </div>
+
+            <button
+              type="button"
+              disabled={loading}
+              onClick={removeImage}
+              className="shrink-0 border border-zinc-700 px-3 py-2 text-xs font-bold uppercase tracking-wider text-zinc-400 transition hover:border-red-400 hover:text-red-400 disabled:opacity-40"
+            >
+              Remove ×
+            </button>
+          </div>
+        )}
+
+        {/* Error message */}
+        {error && (
+          <div
+            role="alert"
+            className="mx-3 mb-3 border-l-4 border-red-500 bg-red-950/30 p-4"
+          >
+            <p className="text-xs font-black uppercase tracking-widest text-red-400">
+              ERROR / ANALYSIS FAILED
+            </p>
+
+            <p className="mt-2 text-sm text-red-200">
+              {error}
+            </p>
+          </div>
+        )}
+
+        {/* Loading state */}
+        {loading && (
+          <div
+            className="mx-3 mb-3 border border-yellow-400 bg-yellow-400/5 p-5"
+            aria-live="polite"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-black uppercase tracking-widest text-yellow-400">
+                PROCESSING
+              </p>
+
+              <span className="h-2 w-2 animate-pulse bg-yellow-400" />
+            </div>
+
+            <p className="mt-4 text-lg font-black uppercase sm:text-xl">
+              {loadingMessages[loadingMessage]}
+            </p>
+
+            <div className="mt-4 h-1 overflow-hidden bg-zinc-800">
+              <div className="h-full w-1/3 animate-pulse bg-yellow-400" />
+            </div>
+
+            <p className="mt-3 text-[10px] uppercase tracking-widest text-zinc-500">
+              This may take a few seconds.
+            </p>
+          </div>
+        )}
+
+        {/* Analyze button */}
+        <div className="p-3 pt-0">
+          <button
+            type="button"
+            disabled={!image || loading}
+            onClick={uploadScreenshot}
+            className="group flex w-full items-center justify-between bg-yellow-400 px-5 py-5 text-left text-black transition hover:bg-yellow-300 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500"
+          >
+            <span className="text-sm font-black uppercase tracking-wider sm:text-base">
+              {loading ? 'ANALYZING...' : 'ROAST MY SCREEN TIME'}
+            </span>
+
+            <span className="text-2xl font-black transition-transform group-hover:translate-x-1">
+              →
+            </span>
+          </button>
+        </div>
+
+        {/* Panel footer */}
+        <div className="flex items-center justify-between border-t border-zinc-800 px-4 py-3">
+          <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-600">
+            YOUR DATA. YOUR BUSINESS.
+          </p>
+
+          <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-600">
+            NO MANUAL ENTRY
+          </p>
+        </div>
+      </div>
     </div>
   )
 }
