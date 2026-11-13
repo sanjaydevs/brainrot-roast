@@ -19,6 +19,7 @@ app.add_middleware(
         "http://localhost:5173",
         "https://sanjaydevs.in",
         "https://www.sanjaydevs.in",
+        "https://brainrotscore.sanjaydevs.in",
     ],
     allow_methods=['POST','GET'],
     allow_headers=["*"]
