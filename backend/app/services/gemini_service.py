@@ -11,10 +11,7 @@ client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
 
-def extract_screen_time(
-    image_bytes: bytes,
-    mime_type: str,
-) -> ScreenTimeData:
+def extract_screen_time( image_bytes: bytes, mime_type: str,) -> ScreenTimeData:
 
     prompt = """
     Analyze this screenshot of a phone's screen-time report.
@@ -28,7 +25,7 @@ def extract_screen_time(
     - Only extract information visible in the screenshot.
     - Convert all durations to whole minutes.
     - Do not invent missing values.
-    - If the total screen time is unreadable, return null.
+    - If the total screen time is unreadable, return add the screen time of apps visible and use it as total screen time.
     - If information is ambiguous, explain it in warnings.
     - Do not calculate or invent a brain rot score.
     - Do not add apps that are not visible.

@@ -6,6 +6,7 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from app.services.gemini_service import extract_screen_time
+from app.scoring import calculate_brain_rot_score
 
 load_dotenv()
 
@@ -51,8 +52,12 @@ async def analyze_screenshot(file:UploadFile = File(...)):
             image_bytes=image_bytes,
             mime_type=file.content_type,
         )
+        score_result = calculate_brain_rot_score(extracted_data)
 
-        return extracted_data.model_dump()
+        return {
+            "screen_time": extracted_data.model_dump(),
+            "score": score_result
+        }
 
     except Exception as exc:
         print(f"Gemini analysis error: {type(exc).__name__}: {exc}")
